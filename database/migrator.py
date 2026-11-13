@@ -26,6 +26,33 @@ CREATE INDEX IF NOT EXISTS idx_tasks_obra ON tasks(obra);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_end_date ON tasks(end_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+
+CREATE TABLE IF NOT EXISTS concrete_measurements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    boletim_code TEXT NOT NULL UNIQUE,
+    obra TEXT NOT NULL,
+    elemento TEXT NOT NULL,
+    data_concretagem TEXT NOT NULL,
+    fck_mpa INTEGER NOT NULL DEFAULT 30,
+    slump_cm REAL NOT NULL DEFAULT 12.0,
+    brita_tipo TEXT NOT NULL DEFAULT 'Brita 1',
+    volume_teorico REAL NOT NULL DEFAULT 0.0,
+    perda_percentual REAL NOT NULL DEFAULT 5.0,
+    volume_total REAL NOT NULL DEFAULT 0.0,
+    fornecedor TEXT DEFAULT '',
+    nota_fiscal TEXT DEFAULT '',
+    lacres TEXT DEFAULT '',
+    corpos_prova INTEGER DEFAULT 4,
+    responsavel TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Concluído',
+    observacoes TEXT DEFAULT '',
+    itens_json TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_concrete_obra ON concrete_measurements(obra);
+CREATE INDEX IF NOT EXISTS idx_concrete_data ON concrete_measurements(data_concretagem);
 """
 
 def init_database(manager: DatabaseManager = db_manager) -> None:

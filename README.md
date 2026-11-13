@@ -13,9 +13,16 @@ Sistema corporativo de alto desempenho para acompanhamento de obras da construç
 ## 📸 Visão Geral da Interface
 
 - **Cockpit Executivo**: Dashboard com 5 KPI Cards (Total, Em Andamento, Concluídas, Atrasadas e Canteiros Ativos), barras de progresso físico individuais por obra e lista de foco imediato para atrasos e urgências.
-- **Visualização Dupla (Lista & Quadro Kanban)**:
+- **Visualização Dupla de Tarefas (Lista & Quadro Kanban)**:
   - **Modo Lista**: Tabela detalhada de cards com avatares de responsáveis, chips de SLA e ações rápidas.
   - **Modo Kanban**: 4 colunas operacionais (`Pendentes`, `Em Andamento`, `Bloqueadas`, `Concluídas`) com botões de avanço de etapa em 1 clique (`◀` e `▶`).
+- **Módulo de Boletim de Medição & Cubagem de Concreto (NOVO)**:
+  - Calculadora geométrica interativa de cubagem ($m^3$) para pilares, vigas, lajes, sapatas e estacas com margem de perda técnica configurável.
+  - Controle tecnológico completo: resistência (fck), slump test, tipo de brita, fornecedor e corpos de prova (CPs).
+  - **Emissão Oficial de Laudo em PDF (A4)** com padrão CREA/ABNT, tabelas de memória de cálculo e campos formais de assinatura.
+- **Efeitos Visuais & Animações**:
+  - Toast Notifications flutuantes animadas com slide-in e auto-dismiss para feedback instantâneo.
+  - Hover glow com iluminação dinâmica nos cards e microinterações táteis.
 - **Design System Obsidian / Sapphire**: Interface moderna em Modo Escuro ou Modo Claro com contraste refinado.
 - **Exportação Executiva em Excel (.xlsx)**: Relatório completo com formatação corporativa, alertas condicionais e resumo de indicadores.
 
@@ -113,8 +120,9 @@ flowchart TD
 | Atalho | Ação |
 | :---: | :--- |
 | `Ctrl + N` | Abrir modal de cadastro de **Nova Tarefa** |
+| `Ctrl + M` | Abrir modal de **Novo Boletim de Medição de Concreto** |
 | `Ctrl + E` | **Exportar Relatório Excel (.xlsx)** |
-| `F5` | **Recarregar** todos os indicadores e tarefas |
+| `F5` | **Recarregar** todos os indicadores, tarefas e medições |
 
 ---
 

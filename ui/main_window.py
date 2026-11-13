@@ -4,15 +4,21 @@ from pathlib import Path
 
 from config import APP_TITLE, APP_VERSION, WINDOW_DEFAULT_SIZE, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, LOGGER
 from ui.theme import FONT_FAMILY, COLORS
+from ui.components.toast import ToastManager
 from ui.views.dashboard_view import DashboardView
 from ui.views.tasks_view import TasksView
+from ui.views.concrete_view import ConcreteView
+
 from services.task_service import TaskService
 from services.metrics_service import MetricsService
 from services.export_service import ExportService
+from services.concrete_service import ConcreteService
+
 from repositories.task_repository import TaskRepository
+from repositories.concrete_repository import ConcreteRepository
 
 class MainWindow(ctk.CTk):
-    """Janela principal moderna com barra lateral obsidian, atalhos de teclado e views responsivas."""
+    """Janela principal moderna com navegação multi-módulos, toasts animados e atalhos globais."""
     def __init__(self):
         super().__init__()
 
@@ -22,15 +28,23 @@ class MainWindow(ctk.CTk):
         self.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
 
         # Injeção de Dependências
-        self.repository = TaskRepository()
-        self.task_service = TaskService(self.repository)
-        self.metrics_service = MetricsService(self.repository)
-        self.export_service = ExportService(self.repository)
+        self.task_repo = TaskRepository()
+        self.concrete_repo = ConcreteRepository()
+
+        self.task_service = TaskService(self.task_repo)
+        self.metrics_service = MetricsService(self.task_repo)
+        self.export_service = ExportService(self.task_repo)
+        self.concrete_service = ConcreteService(self.concrete_repo)
+
+        # Gerenciador de Notificações Toast Flutuantes
+        self.toast_manager = ToastManager(self)
 
         # Layout Principal (Grid 1x2: Sidebar Fixa + Workspace Responsivo)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
+
+        self.current_view_name = "dashboard"
 
         self._build_sidebar()
         self._build_workspace()
@@ -39,6 +53,10 @@ class MainWindow(ctk.CTk):
         # Inicia na aba Dashboard
         self.switch_view("dashboard")
         self.update_sidebar_badges()
+
+    def notify(self, title: str, message: str, toast_type: str = "success"):
+        """Dispara uma notificação toast animada no canto da tela."""
+        self.toast_manager.show(title=title, message=message, toast_type=toast_type)
 
     def _build_sidebar(self):
         self.sidebar = ctk.CTkFrame(
@@ -51,7 +69,7 @@ class MainWindow(ctk.CTk):
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
-        self.sidebar.grid_rowconfigure(3, weight=1)
+        self.sidebar.grid_rowconfigure(4, weight=1)
 
         # Marca e Identidade Visual Superior
         brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
@@ -91,6 +109,7 @@ class MainWindow(ctk.CTk):
         nav_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         nav_frame.grid(row=2, column=0, sticky="ew", padx=12)
 
+        # 1. Painel Executivo
         self.btn_dashboard = ctk.CTkButton(
             nav_frame,
             text=" 📊  Painel Executivo",
@@ -102,8 +121,9 @@ class MainWindow(ctk.CTk):
             hover_color=COLORS["primary_hover"],
             command=lambda: self.switch_view("dashboard")
         )
-        self.btn_dashboard.pack(fill="x", pady=(0, 8))
+        self.btn_dashboard.pack(fill="x", pady=(0, 6))
 
+        # 2. Gerenciar Tarefas
         self.btn_tasks = ctk.CTkButton(
             nav_frame,
             text=" 📋  Gerenciar Tarefas",
@@ -116,9 +136,24 @@ class MainWindow(ctk.CTk):
             hover_color=COLORS["primary_subtle"],
             command=lambda: self.switch_view("tasks")
         )
-        self.btn_tasks.pack(fill="x")
+        self.btn_tasks.pack(fill="x", pady=(0, 6))
 
-        # Atalhos rápidos info
+        # 3. Medições & Concreto (NOVO MÓDULO)
+        self.btn_concrete = ctk.CTkButton(
+            nav_frame,
+            text=" 🧱  Medição de Concreto",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            height=42,
+            anchor="w",
+            corner_radius=8,
+            fg_color="transparent",
+            text_color=COLORS["text_primary"],
+            hover_color=COLORS["primary_subtle"],
+            command=lambda: self.switch_view("concrete")
+        )
+        self.btn_concrete.pack(fill="x")
+
+        # Atalhos Rápidos Informativos
         shortcuts_box = ctk.CTkFrame(
             self.sidebar, corner_radius=8,
             fg_color=COLORS["card_inner_bg"],
@@ -127,24 +162,25 @@ class MainWindow(ctk.CTk):
         shortcuts_box.grid(row=3, column=0, sticky="ew", padx=14, pady=16)
 
         ctk.CTkLabel(
-            shortcuts_box, text="⚡ Atalhos Rápidos",
+            shortcuts_box, text="⚡ Atalhos Globais",
             font=ctk.CTkFont(family=FONT_FAMILY, size=10, weight="bold"),
             text_color=COLORS["text_secondary"]
         ).pack(anchor="w", padx=10, pady=(8, 2))
 
         ctk.CTkLabel(
-            shortcuts_box, text="Ctrl+N : Nova Tarefa\nCtrl+E : Exportar Excel\nF5 : Recarregar",
+            shortcuts_box,
+            text="Ctrl+N : Nova Tarefa\nCtrl+M : Novo Boletim\nCtrl+E : Exportar Excel\nF5 : Recarregar",
             font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             text_color=COLORS["text_muted"], justify="left"
         ).pack(anchor="w", padx=10, pady=(0, 8))
 
-        # Rodapé da Sidebar (Tema & Status do Banco)
+        # Rodapé da Sidebar (Tema & Status)
         bottom_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        bottom_frame.grid(row=4, column=0, sticky="ew", padx=16, pady=20)
+        bottom_frame.grid(row=5, column=0, sticky="ew", padx=16, pady=20)
 
-        # Alternador de Tema Claro / Escuro
+        # Alternador de Tema
         self.theme_label = ctk.CTkLabel(
-            bottom_frame, text="Aparência:",
+            bottom_frame, text="Aparência Visual:",
             font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             text_color=COLORS["text_secondary"]
         )
@@ -158,7 +194,7 @@ class MainWindow(ctk.CTk):
         self.theme_switch.set("Escuro" if ctk.get_appearance_mode() == "Dark" else "Claro")
         self.theme_switch.pack(fill="x", pady=(0, 10))
 
-        # Status do Banco SQLite WAL
+        # Status do Banco
         db_badge = ctk.CTkLabel(
             bottom_frame,
             text="🟢 SQLite WAL • Ativo & Seguro",
@@ -188,29 +224,46 @@ class MainWindow(ctk.CTk):
             on_data_changed=self._on_data_changed
         )
 
+        self.concrete_view = ConcreteView(
+            self.main_container,
+            concrete_service=self.concrete_service,
+            task_service=self.task_service,
+            on_notify=self.notify
+        )
+
     def _bind_shortcuts(self):
-        # Atalhos de Teclado Corporativos
         self.bind("<Control-n>", lambda e: self.tasks_view.open_new_task_dialog())
         self.bind("<Control-N>", lambda e: self.tasks_view.open_new_task_dialog())
+        self.bind("<Control-m>", lambda e: self.concrete_view.open_new_dialog())
+        self.bind("<Control-M>", lambda e: self.concrete_view.open_new_dialog())
         self.bind("<Control-e>", lambda e: self.tasks_view.export_to_excel())
         self.bind("<Control-E>", lambda e: self.tasks_view.export_to_excel())
         self.bind("<F5>", lambda e: self._on_data_changed())
 
     def switch_view(self, view_name: str):
+        self.current_view_name = view_name
+
+        # Esconder todas as views
+        self.dashboard_view.grid_forget()
+        self.tasks_view.grid_forget()
+        self.concrete_view.grid_forget()
+
+        # Resetar estilos de botão da sidebar
+        for btn in (self.btn_dashboard, self.btn_tasks, self.btn_concrete):
+            btn.configure(fg_color="transparent", text_color=COLORS["text_primary"])
+
         if view_name == "dashboard":
-            self.tasks_view.grid_forget()
             self.dashboard_view.grid(row=0, column=0, sticky="nsew")
             self.dashboard_view.refresh()
-
             self.btn_dashboard.configure(fg_color=COLORS["primary"], text_color="#ffffff")
-            self.btn_tasks.configure(fg_color="transparent", text_color=COLORS["text_primary"])
-        else:
-            self.dashboard_view.grid_forget()
+        elif view_name == "tasks":
             self.tasks_view.grid(row=0, column=0, sticky="nsew")
             self.tasks_view.refresh_tasks()
-
             self.btn_tasks.configure(fg_color=COLORS["primary"], text_color="#ffffff")
-            self.btn_dashboard.configure(fg_color="transparent", text_color=COLORS["text_primary"])
+        elif view_name == "concrete":
+            self.concrete_view.grid(row=0, column=0, sticky="nsew")
+            self.concrete_view.refresh()
+            self.btn_concrete.configure(fg_color=COLORS["primary"], text_color="#ffffff")
 
         self.update_sidebar_badges()
 
@@ -220,10 +273,15 @@ class MainWindow(ctk.CTk):
         self.btn_dashboard.configure(text=f" 📊  Painel Executivo{overdue_note}")
         self.btn_tasks.configure(text=f" 📋  Gerenciar Tarefas ({metrics.total})")
 
+        concrete_stats = self.concrete_service.get_stats()
+        self.btn_concrete.configure(text=f" 🧱  Medição Concreto ({concrete_stats['total_boletins']})")
+
     def _on_data_changed(self):
         self.update_sidebar_badges()
         self.dashboard_view.refresh()
         self.tasks_view.refresh_tasks()
+        self.concrete_view.refresh()
+        self.notify("Dados Atualizados", "Os indicadores e tarefas foram sincronizados com sucesso.", "info")
 
     def _handle_theme_change(self, mode: str):
         ctk_mode = "Dark" if mode == "Escuro" else "Light"
