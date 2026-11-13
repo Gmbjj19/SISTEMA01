@@ -1,8 +1,9 @@
 import customtkinter as ctk
 from typing import Optional
 from pathlib import Path
+from PIL import Image as PILImage
 
-from config import APP_TITLE, APP_VERSION, LOGGER
+from config import APP_TITLE, APP_VERSION, LOGGER, APP_ICON_PATH, LOGO_DARK_PATH, LOGO_LIGHT_PATH
 from ui.theme import FONT_FAMILY, COLORS
 from ui.components.toast import ToastManager
 from ui.views.dashboard_view import DashboardView
@@ -26,6 +27,13 @@ class MainWindow(ctk.CTk):
         self.title(f"{APP_TITLE} • {APP_VERSION}")
         self.geometry("1240x820")
         self.minsize(1020, 680)
+
+        # Ícone da Janela / Taskbar
+        if APP_ICON_PATH.exists():
+            try:
+                self.iconbitmap(str(APP_ICON_PATH))
+            except Exception as e:
+                LOGGER.debug("Não foi possível carregar o ícone .ico: %s", e)
 
         # Injeção de Dependências
         self.task_repo = TaskRepository()
@@ -71,35 +79,51 @@ class MainWindow(ctk.CTk):
         self.sidebar.grid_propagate(False)
         self.sidebar.grid_rowconfigure(4, weight=1)
 
-        # Marca e Identidade Visual Superior
+        # Marca e Identidade Visual Superior (Logotipo Oficial)
         brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        brand_frame.grid(row=0, column=0, sticky="ew", padx=16, pady=(24, 16))
+        brand_frame.grid(row=0, column=0, sticky="ew", padx=14, pady=(18, 12))
 
-        logo_box = ctk.CTkFrame(
-            brand_frame, width=38, height=38, corner_radius=10,
-            fg_color="#064e3b",
-        )
-        logo_box.pack(side="left", padx=(0, 10))
-        logo_box.pack_propagate(False)
+        if LOGO_DARK_PATH.exists() and LOGO_LIGHT_PATH.exists():
+            try:
+                pil_light = PILImage.open(LOGO_LIGHT_PATH)
+                pil_dark = PILImage.open(LOGO_DARK_PATH)
+                # Mantém proporção da arte 243x176 (~1.38:1)
+                self.logo_ctk = ctk.CTkImage(
+                    light_image=pil_light,
+                    dark_image=pil_dark,
+                    size=(146, 105)
+                )
+                self.logo_label = ctk.CTkLabel(
+                    brand_frame,
+                    image=self.logo_ctk,
+                    text=""
+                )
+                self.logo_label.pack(anchor="center", pady=(0, 6))
+            except Exception as e:
+                LOGGER.warning("Erro ao carregar logotipo na sidebar: %s", e)
+                ctk.CTkLabel(
+                    brand_frame,
+                    text="MARCON EMPREITEIRA",
+                    font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+                    text_color=COLORS["text_primary"]
+                ).pack(anchor="center")
+        else:
+            ctk.CTkLabel(
+                brand_frame,
+                text="MARCON EMPREITEIRA",
+                font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"),
+                text_color=COLORS["text_primary"]
+            ).pack(anchor="center")
 
+        # Badge de Gestão & Engenharia
+        tag_frame = ctk.CTkFrame(brand_frame, fg_color=("#e2e8f0", "#1e293b"), corner_radius=12)
+        tag_frame.pack(anchor="center", pady=(0, 2))
         ctk.CTkLabel(
-            logo_box, text="🏗️", font=ctk.CTkFont(family=FONT_FAMILY, size=18)
-        ).pack(expand=True)
-
-        text_brand = ctk.CTkFrame(brand_frame, fg_color="transparent")
-        text_brand.pack(side="left")
-
-        ctk.CTkLabel(
-            text_brand, text="OBRAS PRO",
-            font=ctk.CTkFont(family=FONT_FAMILY, size=15, weight="bold"),
-            text_color=COLORS["text_primary"]
-        ).pack(anchor="w")
-
-        ctk.CTkLabel(
-            text_brand, text="ENGENHARIA & GESTÃO",
+            tag_frame,
+            text=" ENGENHARIA & GESTÃO ",
             font=ctk.CTkFont(family=FONT_FAMILY, size=9, weight="bold"),
             text_color=("#064e3b", "#10b981")
-        ).pack(anchor="w")
+        ).pack(padx=8, pady=2)
 
         # Divisor Sutil
         sep1 = ctk.CTkFrame(self.sidebar, height=1, fg_color=COLORS["card_border"])

@@ -5,12 +5,12 @@ from typing import Optional, Any
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, KeepTogether, Image as RLImage
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 
-from config import LOGGER
+from config import LOGGER, LOGO_PDF_PATH
 from models.concrete import ConcreteMeasurement
 
 class ConcretePDFService:
@@ -89,13 +89,15 @@ class ConcretePDFService:
         story = []
 
         # 1. CABEÇALHO CORPORATIVO
+        logo_item = RLImage(str(LOGO_PDF_PATH), width=3.0 * cm, height=2.2 * cm) if LOGO_PDF_PATH.exists() else Paragraph("<b>MARCON</b>", body_style)
         header_data = [
             [
-                Paragraph("<b>PRO ENGENHARIA & CONSTRUÇÕES LTDA.</b><br/><font color='#64748B' size='8'>SISTEMA INTEGRADO DE GESTÃO E CONTROLE TECNOLÓGICO</font>", body_style),
+                logo_item,
+                Paragraph("<b>MARCON EMPREITEIRA</b><br/><font color='#64748B' size='8'>SISTEMA INTEGRADO DE ENGENHARIA & GESTÃO</font>", body_style),
                 Paragraph(f"<b>BOLETIM DE MEDIÇÃO:</b> <font color='#1E3A8A' size='11'><b>{bm.boletim_code}</b></font><br/><b>Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}", body_style)
             ]
         ]
-        t_header = Table(header_data, colWidths=[10 * cm, 8 * cm])
+        t_header = Table(header_data, colWidths=[3.2 * cm, 7.8 * cm, 7.0 * cm])
         t_header.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -315,14 +317,19 @@ class ConcretePDFService:
         story = []
 
         # Header
+        logo_item = RLImage(str(LOGO_PDF_PATH), width=3.0 * cm, height=2.2 * cm) if LOGO_PDF_PATH.exists() else Paragraph("<b>MARCON</b>", body_style)
         h_data = [
             [
-                Paragraph("<b>PRO ENGENHARIA & GESTÃO ESTRUTURAL</b><br/><font color='#64748B' size='8'>SISTEMA DE CONTROLE DE CONCRETO E FORMAS</font>", body_style),
+                logo_item,
+                Paragraph("<b>MARCON EMPREITEIRA</b><br/><font color='#64748B' size='8'>SISTEMA DE CONTROLE DE CONCRETO & FORMAS</font>", body_style),
                 Paragraph(f"<b>CÓDIGO:</b> <font color='#064E3B' size='11'><b>{q.codigo}</b></font><br/><b>Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}", body_style)
             ]
         ]
-        th = Table(h_data, colWidths=[10 * cm, 8 * cm])
-        th.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+        th = Table(h_data, colWidths=[3.2 * cm, 7.8 * cm, 7.0 * cm])
+        th.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
         story.append(th)
         story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceBefore=4, spaceAfter=8))
 
