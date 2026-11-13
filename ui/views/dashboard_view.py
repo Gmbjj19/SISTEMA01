@@ -51,10 +51,15 @@ class DashboardView(ctk.CTkFrame):
         )
         title.pack(anchor="w")
 
-        today_str = date.today().strftime("%d de %B de %Y")
+        today = date.today()
+        week_num = today.isocalendar()[1]
+        meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+        month_name = meses[today.month - 1]
+        today_str = f"{today.day} de {month_name} de {today.year}"
+        week_str = f"Semana {week_num}"
         self.subtitle = ctk.CTkLabel(
             left_box,
-            text=f"Acompanhamento em tempo real dos cronogramas e entregas de canteiro • {today_str}",
+            text=f"Acompanhamento em tempo real dos cronogramas e entregas de canteiro • {today_str} • {week_str}",
             font=ctk.CTkFont(family=FONT_FAMILY, size=12),
             text_color=COLORS["text_secondary"]
         )

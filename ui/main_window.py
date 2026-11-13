@@ -9,14 +9,17 @@ from ui.components.toast import ToastManager
 from ui.views.dashboard_view import DashboardView
 from ui.views.tasks_view import TasksView
 from ui.views.quantitativo_view import QuantitativoView
+from ui.views.concrete_view import ConcreteView
 
 from services.task_service import TaskService
 from services.metrics_service import MetricsService
 from services.export_service import ExportService
 from services.quantitativo_service import QuantitativoService
+from services.concrete_service import ConcreteService
 
 from repositories.task_repository import TaskRepository
 from repositories.quantitativo_repository import QuantitativoRepository
+from repositories.concrete_repository import ConcreteRepository
 
 class MainWindow(ctk.CTk):
     """Janela principal moderna com visual de aplicativo desktop, navegação SPA e alta responsividade."""
