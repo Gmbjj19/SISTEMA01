@@ -147,3 +147,4 @@ class ConcreteRepository:
             "obras_atendidas": obras_count,
             "fck_medio": round(media_fck, 0)
         }
+

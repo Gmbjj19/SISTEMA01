@@ -250,3 +250,4 @@ class ConcreteView(ctk.CTkFrame):
             self.refresh()
             if self.on_notify:
                 self.on_notify("Boletim Excluído", f"{bm.boletim_code} foi removido com sucesso.", "info")
+

@@ -263,3 +263,4 @@ class ConcretePDFService:
         doc.build(story)
         LOGGER.info("Boletim de Medição em PDF gerado com sucesso: %s", output_path)
         return output_path
+

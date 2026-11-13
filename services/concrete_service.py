@@ -86,3 +86,4 @@ class ConcreteService:
         if not bm:
             raise ValueError(f"Boletim #{bm_id} não encontrado.")
         return self.pdf_service.generate_pdf(bm, output_path)
+

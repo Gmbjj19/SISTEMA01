@@ -152,3 +152,4 @@ class ConcreteCard(ctk.CTkFrame):
     def _handle_delete(self):
         if self.on_delete:
             self.on_delete(self.bm)
+

@@ -428,3 +428,4 @@ class ConcreteDialog(ctk.CTkToplevel):
 
     def show_error(self, message: str):
         self.error_label.configure(text=f"⚠️ {message}")
+

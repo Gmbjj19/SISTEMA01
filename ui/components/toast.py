@@ -99,3 +99,4 @@ class ToastManager:
         # Posicionamento no canto superior direito
         toast.place(relx=0.98, rely=0.04, anchor="ne")
         toast.lift()
+
