@@ -1,6 +1,6 @@
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -262,5 +262,177 @@ class ConcretePDFService:
         # Compilar documento
         doc.build(story)
         LOGGER.info("Boletim de Medição em PDF gerado com sucesso: %s", output_path)
+        return output_path
+
+    def generate_quantitativo_pdf(self, q: Any, output_path: Path) -> Path:
+        """Gera Laudo Oficial do Quantitativo Estrutural (Concreto e Formas) em PDF."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        doc = SimpleDocTemplate(
+            str(output_path),
+            pagesize=A4,
+            leftMargin=1.5 * cm,
+            rightMargin=1.5 * cm,
+            topMargin=1.2 * cm,
+            bottomMargin=1.2 * cm
+        )
+
+        PRIMARY = colors.HexColor("#064E3B")    # Verde Floresta Corporativo (igual ao print)
+        SECONDARY = colors.HexColor("#0F172A")
+        ACCENT = colors.HexColor("#10B981")
+        BG_LIGHT = colors.HexColor("#F8FAFC")
+        BORDER = colors.HexColor("#CBD5E1")
+        TEXT_MUTED = colors.HexColor("#64748B")
+
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "QTitle", parent=styles["Normal"],
+            fontName="Helvetica-Bold", fontSize=15, leading=18,
+            textColor=PRIMARY, alignment=1
+        )
+        subtitle_style = ParagraphStyle(
+            "QSub", parent=styles["Normal"],
+            fontName="Helvetica", fontSize=9, leading=11,
+            textColor=TEXT_MUTED, alignment=1
+        )
+        section_title = ParagraphStyle(
+            "QSec", parent=styles["Normal"],
+            fontName="Helvetica-Bold", fontSize=10, leading=13,
+            textColor=PRIMARY
+        )
+        body_style = ParagraphStyle(
+            "QBody", parent=styles["Normal"],
+            fontName="Helvetica", fontSize=8.5, leading=10.5,
+            textColor=SECONDARY
+        )
+        body_bold = ParagraphStyle(
+            "QBold", parent=styles["Normal"],
+            fontName="Helvetica-Bold", fontSize=8.5, leading=10.5,
+            textColor=SECONDARY
+        )
+
+        story = []
+
+        # Header
+        h_data = [
+            [
+                Paragraph("<b>PRO ENGENHARIA & GESTÃO ESTRUTURAL</b><br/><font color='#64748B' size='8'>SISTEMA DE CONTROLE DE CONCRETO E FORMAS</font>", body_style),
+                Paragraph(f"<b>CÓDIGO:</b> <font color='#064E3B' size='11'><b>{q.codigo}</b></font><br/><b>Emissão:</b> {datetime.now().strftime('%d/%m/%Y às %H:%M')}", body_style)
+            ]
+        ]
+        th = Table(h_data, colWidths=[10 * cm, 8 * cm])
+        th.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+        story.append(th)
+        story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceBefore=4, spaceAfter=8))
+
+        # Título
+        story.append(Paragraph(f"{q.disciplina.upper()} · {q.pavimento.upper()}", title_style))
+        story.append(Paragraph(f"{q.obra.upper()} · {q.torre_setor.upper()} · Rev. {q.revisao} · {q.status.upper()}", subtitle_style))
+        story.append(Spacer(1, 10))
+
+        # Metadados
+        ident_data = [
+            [
+                Paragraph(f"<b>Obra:</b> {q.obra}", body_style),
+                Paragraph(f"<b>Torre / Setor:</b> {q.torre_setor}", body_style),
+                Paragraph(f"<b>Pavimento:</b> {q.pavimento}", body_style)
+            ],
+            [
+                Paragraph(f"<b>Folha do Projeto:</b> {q.folha_projeto}", body_style),
+                Paragraph(f"<b>Revisão:</b> {q.revisao}", body_style),
+                Paragraph(f"<b>Data:</b> {q.data_levantamento_br}", body_style)
+            ],
+            [
+                Paragraph(f"<b>Responsável Técnico:</b> {q.responsavel}", body_style),
+                Paragraph(f"<b>Status:</b> <font color='#064E3B'><b>{q.status.upper()}</b></font>", body_style),
+                Paragraph(f"<b>Total Lançamentos:</b> {q.total_lancamentos}", body_style)
+            ]
+        ]
+        ti = Table(ident_data, colWidths=[6.0 * cm, 6.0 * cm, 6.0 * cm])
+        ti.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BG_LIGHT),
+            ('BOX', (0, 0), (-1, -1), 0.8, BORDER),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(ti)
+        story.append(Spacer(1, 10))
+
+        # Banner de Totais (Estilo Forest Green do Print)
+        kpi_data = [
+            [
+                Paragraph("<font color='#A7F3D0' size='8'>CONCRETO TOTAL</font><br/><font color='#FFFFFF' size='13'><b>" + f"{q.concreto_total:.3f} m³".replace(".", ",") + "</b></font>", body_style),
+                Paragraph("<font color='#A7F3D0' size='8'>CONCRETO EXECUTADO</font><br/><font color='#FFFFFF' size='13'><b>" + f"{q.concreto_executado:.3f} m³".replace(".", ",") + "</b></font>", body_style),
+                Paragraph("<font color='#A7F3D0' size='8'>EXECUÇÃO FÍSICA</font><br/><font color='#FFFFFF' size='13'><b>" + f"{q.percentual_execucao:.1f}%".replace(".", ",") + "</b></font>", body_style),
+                Paragraph("<font color='#A7F3D0' size='8'>ÁREA DE FORMAS</font><br/><font color='#FFFFFF' size='13'><b>" + f"{q.formas_total:.2f} m²".replace(".", ",") + "</b></font>", body_style)
+            ]
+        ]
+        tkpi = Table(kpi_data, colWidths=[4.5 * cm, 4.5 * cm, 4.5 * cm, 4.5 * cm])
+        tkpi.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), PRIMARY),
+            ('BOX', (0, 0), (-1, -1), 1.0, colors.HexColor("#065F46")),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(tkpi)
+        story.append(Spacer(1, 12))
+
+        # Tabela de Lançamentos
+        story.append(Paragraph("LANÇAMENTOS ESTRUTURAIS DE PEÇAS", section_title))
+        story.append(Spacer(1, 3))
+
+        l_headers = ["ELEMENTO", "LOCAL", "PÇS", "DIMENSÕES", "QTD", "CONCRETO (m³)", "FORMAS (m²)", "EXECUÇÃO"]
+        l_rows = [l_headers]
+
+        for item in q.lancamentos:
+            l_rows.append([
+                f"{item.elemento}\n({item.tipo})",
+                item.local,
+                str(item.pecas),
+                item.dimensoes_display,
+                f"{item.qtd:.2f}".replace(".", ","),
+                f"{item.concreto_m3:.3f}".replace(".", ","),
+                f"{item.formas_m2:.2f}".replace(".", ","),
+                item.execucao
+            ])
+
+        tl = Table(l_rows, colWidths=[2.6 * cm, 4.4 * cm, 1.0 * cm, 3.4 * cm, 1.3 * cm, 2.2 * cm, 1.8 * cm, 1.3 * cm])
+        tl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('ALIGN', (3, 1), (3, -1), 'LEFT'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, BG_LIGHT]),
+            ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        story.append(tl)
+
+        # Assinaturas
+        story.append(Spacer(1, 20))
+        sign_data = [
+            [
+                Paragraph("___________________________________<br/><b>Responsável pelo Levantamento</b><br/><font size='7' color='#64748B'>" + q.responsavel + "</font>", body_style),
+                Paragraph("___________________________________<br/><b>Fiscal de Obras / Estrutura</b><br/><font size='7' color='#64748B'>Aprovação Técnica</font>", body_style)
+            ]
+        ]
+        ts = Table(sign_data, colWidths=[9.0 * cm, 9.0 * cm])
+        ts.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(KeepTogether(ts))
+
+        doc.build(story)
+        LOGGER.info("Quantitativo em PDF gerado com sucesso: %s", output_path)
         return output_path
 

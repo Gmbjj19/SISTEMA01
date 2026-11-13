@@ -5,7 +5,7 @@ Padrão Sênior: Separação de responsabilidades, migrações automáticas e tr
 import sys
 import customtkinter as ctk
 from config import LOGGER, APP_TITLE, APP_VERSION
-from database.migrator import init_database, migrate_legacy_data_if_needed
+from database.migrator import init_database, migrate_legacy_data_if_needed, seed_sample_quantitativos_if_needed
 from ui.main_window import MainWindow
 
 def bootstrap():
@@ -20,6 +20,7 @@ def bootstrap():
     try:
         init_database()
         migrated = migrate_legacy_data_if_needed()
+        seed_sample_quantitativos_if_needed()
         if migrated > 0:
             LOGGER.info("Migração automática concluída com sucesso (%d tarefas importadas).", migrated)
     except Exception as e:

@@ -16,10 +16,12 @@ Sistema corporativo de alto desempenho para acompanhamento de obras da construç
 - **Visualização Dupla de Tarefas (Lista & Quadro Kanban)**:
   - **Modo Lista**: Tabela detalhada de cards com avatares de responsáveis, chips de SLA e ações rápidas.
   - **Modo Kanban**: 4 colunas operacionais (`Pendentes`, `Em Andamento`, `Bloqueadas`, `Concluídas`) com botões de avanço de etapa em 1 clique (`◀` e `▶`).
-- **Módulo de Boletim de Medição & Cubagem de Concreto (NOVO)**:
-  - Calculadora geométrica interativa de cubagem ($m^3$) para pilares, vigas, lajes, sapatas e estacas com margem de perda técnica configurável.
-  - Controle tecnológico completo: resistência (fck), slump test, tipo de brita, fornecedor e corpos de prova (CPs).
+- **Módulo de Quantitativos & Lançamentos Estruturais (Concreto e Formas)**:
+  - Visual idêntico a um SaaS de engenharia com navegação fluida em aplicativo.
+  - **Banner Executivo Forest Green**: Acompanhamento de Concreto Total ($m^3$), Concreto Executado ($m^3$), Taxa de Execução (%) e Área de Formas ($m^2$).
+  - **Lançamentos de Peças Estruturais**: Blocos, pilares, vigas, lajes e sapatas com dimensões geométricas, memória de cálculo e controle de status (`Não executado` / `Executado`).
   - **Emissão Oficial de Laudo em PDF (A4)** com padrão CREA/ABNT, tabelas de memória de cálculo e campos formais de assinatura.
+  - Criação de novas revisões automáticas (`R01`, `R02`, `R03`) com histórico e reabertura para correção.
 - **Efeitos Visuais & Animações**:
   - Toast Notifications flutuantes animadas com slide-in e auto-dismiss para feedback instantâneo.
   - Hover glow com iluminação dinâmica nos cards e microinterações táteis.

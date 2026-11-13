@@ -3,6 +3,7 @@ from .metrics_service import MetricsService
 from .export_service import ExportService
 from .pdf_report_service import ConcretePDFService
 from .concrete_service import ConcreteService
+from .quantitativo_service import QuantitativoService
 
 __all__ = [
     "TaskService",
@@ -10,5 +11,6 @@ __all__ = [
     "MetricsService",
     "ExportService",
     "ConcretePDFService",
-    "ConcreteService"
+    "ConcreteService",
+    "QuantitativoService"
 ]

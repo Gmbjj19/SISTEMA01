@@ -53,6 +53,46 @@ CREATE TABLE IF NOT EXISTS concrete_measurements (
 
 CREATE INDEX IF NOT EXISTS idx_concrete_obra ON concrete_measurements(obra);
 CREATE INDEX IF NOT EXISTS idx_concrete_data ON concrete_measurements(data_concretagem);
+
+CREATE TABLE IF NOT EXISTS quantitativos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo TEXT NOT NULL UNIQUE,
+    disciplina TEXT NOT NULL DEFAULT 'Estrutural',
+    obra TEXT NOT NULL,
+    torre_setor TEXT NOT NULL,
+    pavimento TEXT NOT NULL,
+    folha_projeto TEXT DEFAULT '—',
+    revisao TEXT NOT NULL DEFAULT 'R01',
+    data_levantamento TEXT NOT NULL,
+    responsavel TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'finalizado',
+    observacoes TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_quant_obra ON quantitativos(obra);
+CREATE INDEX IF NOT EXISTS idx_quant_pav ON quantitativos(pavimento);
+
+CREATE TABLE IF NOT EXISTS lancamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    quantitativo_id INTEGER NOT NULL,
+    elemento TEXT NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'Bloco',
+    local TEXT NOT NULL,
+    pecas INTEGER NOT NULL DEFAULT 1,
+    largura REAL NOT NULL DEFAULT 0.0,
+    comprimento REAL NOT NULL DEFAULT 0.0,
+    altura REAL NOT NULL DEFAULT 0.0,
+    qtd REAL NOT NULL DEFAULT 1.0,
+    concreto_m3 REAL NOT NULL DEFAULT 0.0,
+    formas_m2 REAL NOT NULL DEFAULT 0.0,
+    execucao TEXT NOT NULL DEFAULT 'Não executado',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quantitativo_id) REFERENCES quantitativos(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_lanc_quant_id ON lancamentos(quantitativo_id);
 """
 
 def init_database(manager: DatabaseManager = db_manager) -> None:
@@ -137,4 +177,61 @@ def migrate_legacy_data_if_needed(manager: DatabaseManager = db_manager) -> int:
 
     LOGGER.info("Migração concluída: %d tarefas migradas para SQLite.", imported_total)
     return imported_total
+
+def seed_sample_quantitativos_if_needed(manager: DatabaseManager = db_manager) -> None:
+    """Popula com o quantitativo da Fundação Chronos caso a tabela esteja vazia."""
+    with manager.get_connection() as conn:
+        count = conn.execute("SELECT COUNT(*) as c FROM quantitativos").fetchone()["c"]
+        if count > 0:
+            return
+
+        cursor = conn.execute("""
+            INSERT INTO quantitativos (
+                codigo, disciplina, obra, torre_setor, pavimento, folha_projeto,
+                revisao, data_levantamento, responsavel, status, observacoes,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (
+            "QNT-CHRONOS-01",
+            "Estrutural",
+            "CHRONOS",
+            "TORRE 01 E 02",
+            "FUNDAÇÃO",
+            "—",
+            "R02",
+            "2026-11-11",
+            "Gil marcio Bispo de jesus junior",
+            "finalizado",
+            "Levantamento executivo de blocos e sapatas da fundação conforme projeto estrutural R02."
+        ))
+        quant_id = cursor.lastrowid
+
+        # 15 Lançamentos idênticos ao projeto do usuário
+        itens_sample = [
+            ("B101", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 0.9, 0.9, 1.0, 1.0, 0.810, 3.60),
+            ("B102", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 0.9, 0.9, 1.0, 1.0, 0.810, 3.60),
+            ("B103", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 0.8, 0.8, 0.8, 1.0, 0.512, 2.56),
+            ("B118", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 0.8, 0.8, 0.8, 1.0, 0.512, 2.56),
+            ("B119", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 0.8, 0.8, 0.8, 1.0, 0.512, 2.56),
+            ("B120", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 1.2, 1.2, 1.0, 1.0, 1.440, 4.80),
+            ("B121", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 1.2, 1.2, 1.0, 1.0, 1.440, 4.80),
+            ("B122", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 1.5, 1.5, 1.2, 1.0, 2.700, 7.20),
+            ("B123", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 1.5, 1.5, 1.2, 1.0, 2.700, 7.20),
+            ("B124", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.0, 2.0, 1.4, 1.0, 5.600, 11.20),
+            ("B125", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.0, 2.0, 1.4, 1.0, 5.600, 11.20),
+            ("B126", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.5, 2.5, 1.5, 1.0, 9.375, 15.00),
+            ("B127", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.5, 2.5, 1.5, 1.0, 9.375, 15.00),
+            ("B128", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.8, 2.8, 1.6, 1.0, 12.544, 17.92),
+            ("B129", "Bloco", "TORRE 01 E 02 · FUNDAÇÃO", 1, 2.6, 2.6, 1.6, 1.0, 10.816, 51.88)
+        ]
+
+        for el, tp, loc, pc, l, c, h, q, v_conc, v_form in itens_sample:
+            conn.execute("""
+                INSERT INTO lancamentos (
+                    quantitativo_id, elemento, tipo, local, pecas, largura,
+                    comprimento, altura, qtd, concreto_m3, formas_m2, execucao
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Não executado')
+            """, (quant_id, el, tp, loc, pc, l, c, h, q, v_conc, v_form))
+
+        LOGGER.info("Quantitativo de exemplo CHRONOS FUNDAÇÃO populado com sucesso (15 lançamentos).")
 

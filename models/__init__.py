@@ -2,6 +2,7 @@ from .enums import TaskPriority, TaskStatus, DeadlineStatus
 from .task import Task, parse_date_str, format_date_br, format_date_iso
 from .metrics import DashboardMetrics, ObraMetrics
 from .concrete import ConcreteItem, ConcreteMeasurement
+from .quantitativo import Quantitativo, LancamentoItem
 
 __all__ = [
     "TaskPriority",
@@ -14,5 +15,7 @@ __all__ = [
     "DashboardMetrics",
     "ObraMetrics",
     "ConcreteItem",
-    "ConcreteMeasurement"
+    "ConcreteMeasurement",
+    "Quantitativo",
+    "LancamentoItem"
 ]
