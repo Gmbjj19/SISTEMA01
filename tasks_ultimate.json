@@ -1,0 +1,14 @@
+[
+    {
+        "text": "Acompanhar serviçoes de alvenaria",
+        "priority": "Média",
+        "completed": false,
+        "created_at": "11/11/2026 14:47"
+    },
+    {
+        "text": "Cobrar o encarregado da obra",
+        "priority": "Urgente",
+        "completed": false,
+        "created_at": "11/11/2026 14:48"
+    }
+]
