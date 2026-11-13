@@ -232,3 +232,4 @@ class QuantitativoRepository:
             "percentual_execucao": perc,
             "total_lancamentos": row_l["total_lancamentos"]
         }
+

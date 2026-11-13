@@ -161,3 +161,4 @@ class Quantitativo:
             created_at=parse_dt(d.get("created_at")),
             updated_at=parse_dt(d.get("updated_at"))
         )
+

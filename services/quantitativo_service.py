@@ -113,3 +113,4 @@ class QuantitativoService:
 
     def get_stats(self) -> Dict[str, Any]:
         return self.repository.get_stats()
+

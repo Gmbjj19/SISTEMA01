@@ -215,3 +215,4 @@ class LancamentoDialog(ctk.CTkToplevel):
         }
         self.on_save_callback(payload)
         self.destroy()
+
