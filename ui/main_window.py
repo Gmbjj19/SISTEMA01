@@ -41,11 +41,13 @@ class MainWindow(ctk.CTk):
         # Injeção de Dependências
         self.task_repo = TaskRepository()
         self.quant_repo = QuantitativoRepository()
+        self.concrete_repo = ConcreteRepository()
 
         self.task_service = TaskService(self.task_repo)
         self.metrics_service = MetricsService(self.task_repo)
         self.export_service = ExportService(self.task_repo)
         self.quant_service = QuantitativoService(self.quant_repo)
+        self.concrete_service = ConcreteService(self.concrete_repo)
 
         # Gerenciador de Notificações Toast Flutuantes
         self.toast_manager = ToastManager(self)
@@ -178,7 +180,22 @@ class MainWindow(ctk.CTk):
             hover_color=COLORS["primary_subtle"],
             command=lambda: self.switch_view("concrete")
         )
-        self.btn_concrete.pack(fill="x")
+        self.btn_concrete.pack(fill="x", pady=(0, 6))
+
+        # 4. Boletins de Medição de Concretagem
+        self.btn_boletins = ctk.CTkButton(
+            nav_frame,
+            text=" 📋  Boletins de Medição",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=13, weight="bold"),
+            height=42,
+            anchor="w",
+            corner_radius=8,
+            fg_color="transparent",
+            text_color=COLORS["text_primary"],
+            hover_color=COLORS["primary_subtle"],
+            command=lambda: self.switch_view("boletins")
+        )
+        self.btn_boletins.pack(fill="x")
 
         # Atalhos Rápidos Informativos
         shortcuts_box = ctk.CTkFrame(
@@ -196,7 +213,7 @@ class MainWindow(ctk.CTk):
 
         ctk.CTkLabel(
             shortcuts_box,
-            text="Ctrl+N : Nova Tarefa\nCtrl+Q : Novo Quantitativo\nCtrl+E : Exportar Excel\nF5 : Recarregar",
+            text="Ctrl+N : Nova Tarefa\nCtrl+Q : Novo Quantitativo\nCtrl+B : Boletins de Medição\nCtrl+E : Exportar Excel\nF5 : Recarregar",
             font=ctk.CTkFont(family=FONT_FAMILY, size=10),
             text_color=COLORS["text_muted"], justify="left"
         ).pack(anchor="w", padx=10, pady=(0, 8))
@@ -230,6 +247,14 @@ class MainWindow(ctk.CTk):
         )
         db_badge.pack(anchor="w")
 
+        version_badge = ctk.CTkLabel(
+            bottom_frame,
+            text=f"v{APP_VERSION} • MARCON EMPREITEIRA",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=9),
+            text_color=COLORS["text_muted"]
+        )
+        version_badge.pack(anchor="w", pady=(2, 0))
+
     def _build_workspace(self):
         self.main_container = ctk.CTkFrame(self, fg_color=COLORS["main_bg"], corner_radius=0)
         self.main_container.grid(row=0, column=1, sticky="nsew")
@@ -258,11 +283,20 @@ class MainWindow(ctk.CTk):
             on_notify=self.notify
         )
 
+        self.concrete_view = ConcreteView(
+            self.main_container,
+            concrete_service=self.concrete_service,
+            task_service=self.task_service,
+            on_notify=self.notify
+        )
+
     def _bind_shortcuts(self):
         self.bind("<Control-n>", lambda e: self.tasks_view.open_new_task_dialog())
         self.bind("<Control-N>", lambda e: self.tasks_view.open_new_task_dialog())
         self.bind("<Control-q>", lambda e: self._shortcut_novo_quantitativo())
         self.bind("<Control-Q>", lambda e: self._shortcut_novo_quantitativo())
+        self.bind("<Control-b>", lambda e: self.switch_view("boletins"))
+        self.bind("<Control-B>", lambda e: self.switch_view("boletins"))
         self.bind("<Control-e>", lambda e: self.tasks_view.export_to_excel())
         self.bind("<Control-E>", lambda e: self.tasks_view.export_to_excel())
         self.bind("<F5>", lambda e: self._on_data_changed())
@@ -278,9 +312,10 @@ class MainWindow(ctk.CTk):
         self.dashboard_view.grid_forget()
         self.tasks_view.grid_forget()
         self.quantitativo_view.grid_forget()
+        self.concrete_view.grid_forget()
 
         # Resetar estilos de botão da sidebar
-        for btn in (self.btn_dashboard, self.btn_tasks, self.btn_concrete):
+        for btn in (self.btn_dashboard, self.btn_tasks, self.btn_concrete, self.btn_boletins):
             btn.configure(fg_color="transparent", text_color=COLORS["text_primary"])
 
         if view_name == "dashboard":
@@ -296,6 +331,10 @@ class MainWindow(ctk.CTk):
             if not self.quantitativo_view.active_quantitativo:
                 self.quantitativo_view.show_list_view()
             self.btn_concrete.configure(fg_color=("#064e3b", "#10b981"), text_color="#ffffff")
+        elif view_name == "boletins":
+            self.concrete_view.grid(row=0, column=0, sticky="nsew")
+            self.concrete_view.refresh()
+            self.btn_boletins.configure(fg_color=COLORS["info"], text_color="#ffffff")
 
         self.update_sidebar_badges()
 
@@ -308,12 +347,26 @@ class MainWindow(ctk.CTk):
         q_stats = self.quant_service.get_stats()
         self.btn_concrete.configure(text=f" 🏗️  Concreto & Formas ({q_stats['total_quantitativos']})")
 
+        bm_stats = self.concrete_service.get_stats()
+        self.btn_boletins.configure(text=f" 📋  Boletins de Medição ({bm_stats['total_boletins']})")
+
     def _on_data_changed(self):
         self.update_sidebar_badges()
         self.dashboard_view.refresh()
         self.tasks_view.refresh_tasks()
+        self.concrete_view.refresh()
         self.notify("Sincronizado", "Dados e indicadores atualizados com sucesso.", "info")
 
     def _handle_theme_change(self, mode: str):
         ctk_mode = "Dark" if mode == "Escuro" else "Light"
         ctk.set_appearance_mode(ctk_mode)
+        import json
+        from config import PREFS_PATH
+        try:
+            prefs = {}
+            if PREFS_PATH.exists():
+                prefs = json.loads(PREFS_PATH.read_text(encoding="utf-8"))
+            prefs["theme"] = ctk_mode
+            PREFS_PATH.write_text(json.dumps(prefs, ensure_ascii=False), encoding="utf-8")
+        except Exception as e:
+            LOGGER.debug("Falha ao salvar preferência de tema: %s", e)

@@ -133,15 +133,15 @@ class FilterBar(ctk.CTkFrame):
         # 5. Botão Reset Filtros
         self.clear_btn = ctk.CTkButton(
             filters_row,
-            text="Limpar",
-            width=65,
+            text="✕ Limpar",
+            width=75,
             height=32,
-            font=ctk.CTkFont(family=FONT_FAMILY, size=11),
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
             fg_color="transparent",
             border_width=1,
             border_color=COLORS["card_border"],
             text_color=COLORS["text_secondary"],
-            hover_color=COLORS["primary_subtle"],
+            hover_color=COLORS["danger_subtle"],
             command=self.reset_filters
         )
         self.clear_btn.pack(side="left")

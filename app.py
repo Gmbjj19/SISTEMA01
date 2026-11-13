@@ -4,7 +4,8 @@ Padrão Sênior: Separação de responsabilidades, migrações automáticas e tr
 
 import sys
 import customtkinter as ctk
-from config import LOGGER, APP_TITLE, APP_VERSION
+import json
+from config import LOGGER, APP_TITLE, APP_VERSION, PREFS_PATH
 from database.migrator import init_database, migrate_legacy_data_if_needed, seed_sample_quantitativos_if_needed
 from ui.main_window import MainWindow
 
@@ -13,7 +14,14 @@ def bootstrap():
     LOGGER.info("Iniciando %s v%s...", APP_TITLE, APP_VERSION)
 
     # 1. Configurações Globais do CustomTkinter
-    ctk.set_appearance_mode("System")
+    saved_theme = "System"
+    try:
+        if PREFS_PATH.exists():
+            prefs = json.loads(PREFS_PATH.read_text(encoding="utf-8"))
+            saved_theme = prefs.get("theme", "System")
+    except Exception:
+        pass
+    ctk.set_appearance_mode(saved_theme)
     ctk.set_default_color_theme("blue")
 
     # 2. Inicialização do Banco de Dados SQLite e Auto-Migração

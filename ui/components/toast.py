@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from typing import Optional
+from typing import Optional, Callable
 from ui.theme import FONT_FAMILY, COLORS
 
 class ToastNotification(ctk.CTkFrame):
@@ -10,7 +10,8 @@ class ToastNotification(ctk.CTkFrame):
         title: str,
         message: str,
         toast_type: str = "success",  # success, danger, info, warning
-        duration_ms: int = 3500,
+        duration_ms: int = 3800,
+        on_dismiss: Optional[Callable[["ToastNotification"], None]] = None,
         **kwargs
     ):
         border_colors = {
@@ -39,6 +40,7 @@ class ToastNotification(ctk.CTkFrame):
         )
 
         self.duration_ms = duration_ms
+        self.on_dismiss = on_dismiss
         self.grid_columnconfigure(1, weight=1)
 
         # Barra lateral colorida
@@ -83,20 +85,49 @@ class ToastNotification(ctk.CTkFrame):
 
     def dismiss(self):
         try:
+            if self.on_dismiss:
+                self.on_dismiss(self)
             self.destroy()
         except Exception:
             pass
 
 
 class ToastManager:
-    """Gerenciador de toasts flutuantes na janela principal."""
+    """Gerenciador de toasts flutuantes na janela principal com empilhamento dinâmico."""
     def __init__(self, root: ctk.CTk):
         self.root = root
         self.active_toasts = []
 
     def show(self, title: str, message: str, toast_type: str = "success"):
-        toast = ToastNotification(self.root, title=title, message=message, toast_type=toast_type)
-        # Posicionamento no canto superior direito
-        toast.place(relx=0.98, rely=0.04, anchor="ne")
-        toast.lift()
+        if len(self.active_toasts) >= 5:
+            # Remove o mais antigo se já atingiu o limite
+            oldest = self.active_toasts.pop(0)
+            try:
+                oldest.destroy()
+            except Exception:
+                pass
 
+        toast = ToastNotification(
+            self.root,
+            title=title,
+            message=message,
+            toast_type=toast_type,
+            on_dismiss=self._handle_dismiss
+        )
+        self.active_toasts.append(toast)
+        self._reposition_all()
+
+    def _handle_dismiss(self, toast: ToastNotification):
+        if toast in self.active_toasts:
+            self.active_toasts.remove(toast)
+        self.root.after(10, self._reposition_all)
+
+    def _reposition_all(self):
+        for idx, t in enumerate(self.active_toasts):
+            try:
+                # Cada toast fica empilhado verticalmente
+                rely_pos = 0.03 + (idx * 0.09)
+                t.place(relx=0.98, rely=rely_pos, anchor="ne")
+                t.lift()
+            except Exception:
+                pass

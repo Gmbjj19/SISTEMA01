@@ -98,7 +98,7 @@ class TaskCard(ctk.CTkFrame):
             text_color=sla_color
         ).pack(padx=8, pady=2)
 
-        # LINHA 2: Descrição (se houver)
+        # LINHA 2: Descrição (se houver) com wraplength dinâmico responsivo
         if self.task.description:
             desc_label = ctk.CTkLabel(
                 content_frame,
@@ -107,9 +107,18 @@ class TaskCard(ctk.CTkFrame):
                 text_color=COLORS["text_secondary"],
                 anchor="w",
                 justify="left",
-                wraplength=660
+                wraplength=580
             )
-            desc_label.grid(row=1, column=0, sticky="w", pady=(2, 6))
+            desc_label.grid(row=1, column=0, sticky="ew", pady=(2, 6))
+
+            def _on_desc_resize(event):
+                new_wrap = max(240, event.width - 40)
+                try:
+                    desc_label.configure(wraplength=new_wrap)
+                except Exception:
+                    pass
+
+            content_frame.bind("<Configure>", _on_desc_resize)
 
         # LINHA 3: Metadados Inferiores com Avatar e Datas
         meta_row = ctk.CTkFrame(content_frame, fg_color="transparent")

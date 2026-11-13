@@ -79,9 +79,17 @@ class KPICard(ctk.CTkFrame):
         )
         self.subtitle_label.pack(anchor="w")
 
-        # Hover Effect
-        self.bind("<Enter>", lambda e: self.configure(border_color=self.accent_color))
-        self.bind("<Leave>", lambda e: self.configure(border_color=COLORS["card_border"]))
+        # Hover Effect Sofisticado
+        def on_enter(e):
+            self.configure(border_color=self.accent_color)
+            self.top_glow.configure(height=5)
+
+        def on_leave(e):
+            self.configure(border_color=COLORS["card_border"])
+            self.top_glow.configure(height=3)
+
+        self.bind("<Enter>", on_enter)
+        self.bind("<Leave>", on_leave)
 
     def update_values(self, value: str, subtitle: str = ""):
         self.value_label.configure(text=value)

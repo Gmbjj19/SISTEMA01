@@ -65,9 +65,17 @@ class DashboardView(ctk.CTkFrame):
         )
         self.subtitle.pack(anchor="w")
 
-        # Botão Ação
+        # Botão Ação e Alertas
         right_box = ctk.CTkFrame(hero_frame, fg_color="transparent")
         right_box.grid(row=0, column=1, sticky="e")
+
+        self.alert_badge = ctk.CTkLabel(
+            right_box,
+            text="",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLORS["danger"]
+        )
+        self.alert_badge.pack(side="left", padx=(0, 10))
 
         refresh_btn = ctk.CTkButton(
             right_box,
@@ -83,6 +91,24 @@ class DashboardView(ctk.CTkFrame):
             command=self.refresh
         )
         refresh_btn.pack(side="left")
+
+        # Barra de Progresso Global do Cronograma Geral
+        progress_frame = ctk.CTkFrame(hero_frame, fg_color="transparent")
+        progress_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+
+        self.global_progress_label = ctk.CTkLabel(
+            progress_frame,
+            text="Progresso geral: 0% concluído",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            text_color=COLORS["text_secondary"]
+        )
+        self.global_progress_label.pack(anchor="w", pady=(0, 3))
+
+        self.global_progress_bar = ctk.CTkProgressBar(
+            progress_frame, height=8, corner_radius=4
+        )
+        self.global_progress_bar.pack(fill="x")
+        self.global_progress_bar.set(0)
 
     def _build_kpi_cards(self):
         self.kpi_container = ctk.CTkFrame(self, fg_color="transparent")
@@ -185,8 +211,32 @@ class DashboardView(ctk.CTkFrame):
         self.card_total.update_values(str(metrics.total), "Tarefas no banco")
         self.card_progress.update_values(str(metrics.em_andamento), f"{metrics.pendentes} a iniciar")
         self.card_done.update_values(str(metrics.concluidas), f"{metrics.taxa_conclusao}% do cronograma")
-        self.card_overdue.update_values(str(metrics.atrasadas), f"{metrics.taxa_atraso}% de atraso")
+
+        overdue_sub = f"{metrics.taxa_atraso}% de atraso"
+        if metrics.vencendo_hoje > 0:
+            overdue_sub += f" • ⏰ {metrics.vencendo_hoje} vencem hoje"
+        self.card_overdue.update_values(str(metrics.atrasadas), overdue_sub)
         self.card_obras.update_values(str(metrics.obras_ativas), "Canteiros ativos")
+
+        # Atualização da Barra de Progresso Global
+        taxa = metrics.taxa_conclusao / 100.0
+        self.global_progress_bar.set(taxa)
+        bar_color = COLORS["success"] if taxa >= 0.8 else (COLORS["info"] if taxa >= 0.4 else COLORS["warning"])
+        self.global_progress_bar.configure(progress_color=bar_color)
+        self.global_progress_label.configure(
+            text=f"Avanço Geral do Cronograma: {metrics.taxa_conclusao}% concluído • {metrics.concluidas} de {metrics.total} atividades finalizadas"
+        )
+
+        # Atualização do Badge de Alerta
+        if metrics.atrasadas > 0 or metrics.urgentes > 0:
+            alerts = []
+            if metrics.atrasadas > 0:
+                alerts.append(f"🚨 {metrics.atrasadas} Atrasada(s)")
+            if metrics.urgentes > 0:
+                alerts.append(f"⚡ {metrics.urgentes} Urgente(s)")
+            self.alert_badge.configure(text=" | ".join(alerts), text_color=COLORS["danger"])
+        else:
+            self.alert_badge.configure(text="✅ Cronograma em Dia", text_color=COLORS["success"])
 
         # Atualização de Obras
         for child in self.obras_scroll.winfo_children():
