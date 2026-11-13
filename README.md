@@ -122,8 +122,8 @@ flowchart TD
 
 ### 1. Clonar o Repositório
 ```bash
-git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
-cd "SISTEMA 01"
+git clone https://github.com/Gmbjj19/SISTEMA01.git
+cd SISTEMA01
 ```
 
 ### 2. Criar e Ativar Ambiente Virtual (Recomendado)
