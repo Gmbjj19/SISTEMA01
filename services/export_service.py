@@ -1,6 +1,6 @@
 from pathlib import Path
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Any
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -196,5 +196,142 @@ class ExportService:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         wb.save(output_path)
         LOGGER.info("Relatório Excel exportado com sucesso: %s", output_path)
+        return output_path
+
+    def export_quantitativo_to_excel(self, q: Any, output_path: Path) -> Path:
+        """Gera planilha Excel (.xlsx) técnica com memorial de cálculo e cubagem de concreto e formas."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = f"Quantitativo {q.codigo}"
+        ws.views.sheetView[0].showGridLines = True
+
+        # Paleta Corporativa Verde Marcon
+        PRIMARY = "064E3B"
+        SECONDARY = "0F172A"
+        ACCENT = "10B981"
+        BG_LIGHT = "F8FAFC"
+        BORDER_CLR = "CBD5E1"
+        SUCCESS_BG = "DCFCE7"
+
+        font_title = Font(name="Segoe UI", size=14, bold=True, color=PRIMARY)
+        font_sub = Font(name="Segoe UI", size=9, italic=True, color="64748B")
+        font_sec = Font(name="Segoe UI", size=10, bold=True, color=PRIMARY)
+        font_header = Font(name="Segoe UI", size=10, bold=True, color="FFFFFF")
+        font_body = Font(name="Segoe UI", size=9, color=SECONDARY)
+        font_bold = Font(name="Segoe UI", size=9, bold=True, color=SECONDARY)
+
+        fill_header = PatternFill(start_color=PRIMARY, end_color=PRIMARY, fill_type="solid")
+        fill_zebra = PatternFill(start_color=BG_LIGHT, end_color=BG_LIGHT, fill_type="solid")
+        fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+        fill_exec = PatternFill(start_color=SUCCESS_BG, end_color=SUCCESS_BG, fill_type="solid")
+
+        border_thin = Border(
+            left=Side(style='thin', color=BORDER_CLR),
+            right=Side(style='thin', color=BORDER_CLR),
+            top=Side(style='thin', color=BORDER_CLR),
+            bottom=Side(style='thin', color=BORDER_CLR)
+        )
+
+        align_center = Alignment(horizontal="center", vertical="center")
+        align_left = Alignment(horizontal="left", vertical="center")
+        align_right = Alignment(horizontal="right", vertical="center")
+
+        # Topo / Título
+        ws["A1"] = "MARCON EMPREITEIRA • LEVANTAMENTO ESTRUTURAL & QUANTITATIVO"
+        ws["A1"].font = font_title
+        ws["A2"] = f"{q.disciplina.upper()} · {q.pavimento.upper()} | {q.obra.upper()} · {q.torre_setor.upper()} · Rev. {q.revisao}"
+        ws["A2"].font = font_sub
+
+        # Bloco de Metadados
+        meta_data = [
+            ("Código:", q.codigo, "Obra:", q.obra),
+            ("Torre / Setor:", q.torre_setor, "Pavimento / Etapa:", q.pavimento),
+            ("Disciplina:", q.disciplina, "Folha de Projeto:", q.folha_projeto),
+            ("Revisão:", q.revisao, "Data do Levantamento:", q.data_levantamento_br),
+            ("Responsável Técnico:", q.responsavel, "Status do Levantamento:", q.status.upper())
+        ]
+
+        curr_row = 4
+        for row_items in meta_data:
+            ws.cell(row=curr_row, column=1, value=row_items[0]).font = font_sec
+            ws.cell(row=curr_row, column=2, value=row_items[1]).font = font_bold
+            ws.cell(row=curr_row, column=5, value=row_items[2]).font = font_sec
+            ws.cell(row=curr_row, column=6, value=row_items[3]).font = font_bold
+            for col_i in range(1, 10):
+                ws.cell(row=curr_row, column=col_i).border = border_thin
+            curr_row += 1
+
+        curr_row += 1
+        # Resumo de Indicadores
+        ws.cell(row=curr_row, column=1, value="CONCRETO TOTAL:").font = font_sec
+        ws.cell(row=curr_row, column=2, value=f"{q.total_concreto_m3:.3f} m³".replace(".", ",")).font = font_bold
+        ws.cell(row=curr_row, column=4, value="EXECUTADO:").font = font_sec
+        ws.cell(row=curr_row, column=5, value=f"{q.concreto_executado_m3:.3f} m³ ({q.percentual_execucao}%)".replace(".", ",")).font = font_bold
+        ws.cell(row=curr_row, column=7, value="FORMAS TOTAL:").font = font_sec
+        ws.cell(row=curr_row, column=8, value=f"{q.total_formas_m2:.2f} m²".replace(".", ",")).font = font_bold
+
+        curr_row += 2
+        # Cabeçalho da Tabela de Lançamentos
+        table_headers = [
+            "Elemento", "Tipo", "Local / Região", "Peças",
+            "Largura (m)", "Compr. (m)", "Altura (m)", "Qtd",
+            "Concreto (m³)", "Formas (m²)", "Execução"
+        ]
+
+        for c_idx, h_text in enumerate(table_headers, start=1):
+            cell = ws.cell(row=curr_row, column=c_idx, value=h_text)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = align_center
+            cell.border = border_thin
+        ws.row_dimensions[curr_row].height = 24
+
+        curr_row += 1
+        lancamentos = q.lancamentos if hasattr(q, "lancamentos") and q.lancamentos else []
+        for r_idx, item in enumerate(lancamentos, start=curr_row):
+            row_fill = fill_exec if item.is_executado else (fill_zebra if r_idx % 2 == 0 else fill_white)
+            vals = [
+                item.elemento,
+                item.tipo,
+                item.local,
+                item.pecas,
+                item.largura,
+                item.comprimento,
+                item.altura,
+                item.qtd,
+                item.concreto_m3,
+                item.formas_m2,
+                item.execucao
+            ]
+
+            for c_idx, val in enumerate(vals, start=1):
+                cell = ws.cell(row=r_idx, column=c_idx, value=val)
+                cell.font = font_body
+                cell.fill = row_fill
+                cell.border = border_thin
+                if c_idx in (1, 2, 3):
+                    cell.alignment = align_left
+                elif c_idx in (4, 11):
+                    cell.alignment = align_center
+                else:
+                    cell.alignment = align_right
+                    if isinstance(val, (int, float)):
+                        cell.number_format = "#,##0.000" if c_idx in (5, 6, 7, 9) else "#,##0.00"
+
+            ws.row_dimensions[r_idx].height = 20
+            curr_row = r_idx
+
+        # Ajuste de largura das colunas
+        col_widths = {
+            1: 15, 2: 12, 3: 26, 4: 8,
+            5: 13, 6: 13, 7: 13, 8: 8,
+            9: 16, 10: 14, 11: 16
+        }
+        for col_idx, width in col_widths.items():
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        wb.save(output_path)
+        LOGGER.info("Quantitativo em Excel exportado com sucesso: %s", output_path)
         return output_path
 

@@ -57,6 +57,17 @@ class TestQuantitativoService(unittest.TestCase):
         if output_pdf.exists():
             os.remove(output_pdf)
 
+    def test_export_quantitativo_to_excel(self):
+        from services.export_service import ExportService
+        q = self.service.list_quantitativos()[0]
+        temp_xlsx = Path(tempfile.gettempdir()) / f"teste_quant_{q.codigo}.xlsx"
+        exp_service = ExportService()
+        output_xlsx = exp_service.export_quantitativo_to_excel(q, temp_xlsx)
+        self.assertTrue(output_xlsx.exists())
+        self.assertGreater(output_xlsx.stat().st_size, 4000)
+        if output_xlsx.exists():
+            os.remove(output_xlsx)
+
 if __name__ == "__main__":
     unittest.main()
 

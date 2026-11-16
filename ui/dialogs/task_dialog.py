@@ -22,11 +22,11 @@ class TaskDialog(ctk.CTkToplevel):
         self.task_to_edit = task_to_edit
         self.is_edit_mode = task_to_edit is not None
 
-        # Configurações da Janela
+        # Configurações da Janela Responsiva
         mode_title = f"Editar Tarefa #{task_to_edit.id}" if self.is_edit_mode else "Nova Tarefa de Obra"
         self.title(f"🏗️ {mode_title}")
-        self.geometry("540x710")
-        self.resizable(False, False)
+        self.minsize(480, 500)
+        self.resizable(True, True)
         
         # Garante foco modal
         self.transient(master)
@@ -37,16 +37,18 @@ class TaskDialog(ctk.CTkToplevel):
 
     def _center_window(self):
         self.update_idletasks()
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
         width = 540
-        height = 710
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
+        height = min(710, screen_h - 70)
+        x = max(0, (screen_w // 2) - (width // 2))
+        y = max(0, (screen_h // 2) - (height // 2) - 20)
         self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _build_ui(self, obras_list: List[str], resp_list: List[str]):
         # Cabeçalho Elegante
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        header_frame.pack(fill="x", padx=28, pady=(20, 10))
+        header_frame.pack(fill="x", padx=24, pady=(16, 8))
 
         header_text = f"✏️ Editar Tarefa #{self.task_to_edit.id}" if self.is_edit_mode else "📋 Nova Tarefa de Canteiro"
         title_label = ctk.CTkLabel(
@@ -65,9 +67,9 @@ class TaskDialog(ctk.CTkToplevel):
         )
         sub_label.pack(anchor="w")
 
-        # Container do Formulário
-        form_frame = ctk.CTkFrame(self, fg_color="transparent")
-        form_frame.pack(fill="both", expand=True, padx=28)
+        # Container do Formulário Scrollable (Garante exibição perfeita em qualquer resolução)
+        form_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
         # 1. Nome da Tarefa
         ctk.CTkLabel(

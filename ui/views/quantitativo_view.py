@@ -55,7 +55,7 @@ class QuantitativoView(ctk.CTkFrame):
         view_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         view_frame.grid(row=0, column=0, sticky="nsew", padx=25, pady=20)
         view_frame.grid_columnconfigure(0, weight=1)
-        view_frame.grid_rowconfigure(2, weight=1)
+        view_frame.grid_rowconfigure(3, weight=1)
 
         # Topo
         top_row = ctk.CTkFrame(view_frame, fg_color="transparent")
@@ -104,22 +104,59 @@ class QuantitativoView(ctk.CTkFrame):
         make_kpi(2, "Área de Formas", f"{stats['formas_total_m2']:.2f} m²".replace(".", ","), "Contato de formas")
         make_kpi(3, "Lançamentos Ativos", f"{stats['total_lancamentos']} peças", f"{stats['total_quantitativos']} levantamentos")
 
+        # Barra de Pesquisa e Filtro Rápido
+        filter_frame = ctk.CTkFrame(view_frame, fg_color="transparent")
+        filter_frame.grid(row=2, column=0, sticky="ew", pady=(0, 12))
+        filter_frame.grid_columnconfigure(0, weight=1)
+
+        search_entry = ctk.CTkEntry(
+            filter_frame,
+            placeholder_text="🔍 Pesquisar levantamento por código (ex: QNT-CHRONOS-01), obra, pavimento, torre ou responsável...",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=12),
+            height=38,
+            corner_radius=8
+        )
+        search_entry.grid(row=0, column=0, sticky="ew")
+
         # Lista de Quantitativos
         scroll = ctk.CTkScrollableFrame(view_frame, corner_radius=14, fg_color=COLORS["sidebar_bg"], border_width=1, border_color=COLORS["card_border"])
-        scroll.grid(row=2, column=0, sticky="nsew")
+        scroll.grid(row=3, column=0, sticky="nsew")
         scroll.grid_columnconfigure(0, weight=1)
 
-        quantitativos = self.quantitativo_service.list_quantitativos()
+        def _refresh_quant_list():
+            term = search_entry.get().strip().lower()
+            all_quants = self.quantitativo_service.list_quantitativos()
 
-        if not quantitativos:
-            empty = ctk.CTkFrame(scroll, fg_color="transparent")
-            empty.pack(pady=70)
-            ctk.CTkLabel(empty, text="📋 Nenhum levantamento cadastrado", font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"), text_color=COLORS["text_secondary"]).pack(pady=(0, 4))
-            ctk.CTkLabel(empty, text="Clique em '+ Novo Quantitativo' para cadastrar a primeira medição.", font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLORS["text_muted"]).pack()
-            return
+            for child in scroll.winfo_children():
+                child.destroy()
 
-        for q in quantitativos:
-            self._render_quantitativo_card(scroll, q)
+            if term:
+                filtered = [
+                    q for q in all_quants
+                    if term in q.codigo.lower()
+                    or term in q.obra.lower()
+                    or term in q.pavimento.lower()
+                    or term in q.torre_setor.lower()
+                    or term in q.disciplina.lower()
+                    or term in q.responsavel.lower()
+                ]
+            else:
+                filtered = all_quants
+
+            if not filtered:
+                empty = ctk.CTkFrame(scroll, fg_color="transparent")
+                empty.pack(pady=70)
+                msg = f"🔍 Nenhum levantamento encontrado para '{term}'" if term else "📋 Nenhum levantamento cadastrado"
+                ctk.CTkLabel(empty, text=msg, font=ctk.CTkFont(family=FONT_FAMILY, size=16, weight="bold"), text_color=COLORS["text_secondary"]).pack(pady=(0, 4))
+                sub_msg = "Ajuste os termos da busca ou cadastre um novo quantitativo." if term else "Clique em '+ Novo Quantitativo' para cadastrar a primeira medição."
+                ctk.CTkLabel(empty, text=sub_msg, font=ctk.CTkFont(family=FONT_FAMILY, size=12), text_color=COLORS["text_muted"]).pack()
+                return
+
+            for q in filtered:
+                self._render_quantitativo_card(scroll, q)
+
+        search_entry.bind("<KeyRelease>", lambda e: _refresh_quant_list())
+        _refresh_quant_list()
 
     def _render_quantitativo_card(self, master, q: Quantitativo):
         card = ctk.CTkFrame(
@@ -232,7 +269,7 @@ class QuantitativoView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_FAMILY, size=11), text_color=COLORS["text_secondary"]
         ).pack(anchor="w", padx=(36, 0))
 
-        # Ações do Topo Direito (Gerar PDF + Novo Lançamento)
+        # Ações do Topo Direito (Gerar PDF + Exportar Excel + Novo Lançamento)
         t_right = ctk.CTkFrame(top_header, fg_color="transparent")
         t_right.grid(row=0, column=1, sticky="e")
 
@@ -244,6 +281,15 @@ class QuantitativoView(ctk.CTkFrame):
             command=self._export_pdf
         )
         pdf_btn.pack(side="left", padx=(0, 6))
+
+        excel_btn = ctk.CTkButton(
+            t_right, text="📊 Exportar Excel",
+            font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"),
+            height=34, width=130,
+            fg_color=COLORS["success"], hover_color=COLORS["success_hover"],
+            command=self._export_excel
+        )
+        excel_btn.pack(side="left", padx=(0, 6))
 
         add_p_btn = ctk.CTkButton(
             t_right, text="+ Adicionar Peça",
@@ -561,6 +607,31 @@ class QuantitativoView(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erro ao Gerar PDF", f"Falha na compilação:\n{e}", parent=self.winfo_toplevel())
 
+    def _export_excel(self):
+        q = self.active_quantitativo
+        default_name = f"Quantitativo_{q.obra}_{q.pavimento}_{q.revisao}.xlsx".replace(" ", "_")
+
+        file_path = filedialog.asksaveasfilename(
+            parent=self.winfo_toplevel(),
+            defaultextension=".xlsx",
+            initialfile=default_name,
+            filetypes=[("Planilhas Excel", "*.xlsx"), ("Todos os Arquivos", "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            from services.export_service import ExportService
+            exp_svc = ExportService()
+            saved_path = exp_svc.export_quantitativo_to_excel(q, Path(file_path))
+            if self.on_notify:
+                self.on_notify("Excel Gerado!", f"Planilha de {q.pavimento} exportada com sucesso.", "success")
+            open_f = messagebox.askyesno("Excel Gerado", f"Planilha salva em:\n{saved_path}\n\nDeseja abrir o arquivo agora?", parent=self.winfo_toplevel())
+            if open_f:
+                os.startfile(str(saved_path))
+        except Exception as e:
+            messagebox.showerror("Erro ao Gerar Excel", f"Falha na exportação para Excel:\n{e}", parent=self.winfo_toplevel())
+
     # =========================================================================
     # 3. ESTADO: CRIAR NOVO QUANTITATIVO (IDÊNTICO AO PRINT 2)
     # =========================================================================
@@ -701,11 +772,25 @@ class QuantitativoView(ctk.CTkFrame):
         self.create_rev_entry.insert(0, "R02")
         self.create_rev_entry.pack(fill="x", pady=(2, 0))
 
-        # 5. Data do levantamento 📅
-        ctk.CTkLabel(inner, text="Data do levantamento", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color=COLORS["text_secondary"]).pack(anchor="w")
-        self.create_data_entry = ctk.CTkEntry(inner, placeholder_text="DD/MM/AAAA", height=36)
+        # 5. Data do levantamento e Responsável Técnico
+        r_meta = ctk.CTkFrame(inner, fg_color="transparent")
+        r_meta.pack(fill="x", pady=(0, 14))
+        r_meta.grid_columnconfigure(0, weight=1)
+        r_meta.grid_columnconfigure(1, weight=1)
+
+        c_data = ctk.CTkFrame(r_meta, fg_color="transparent")
+        c_data.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        ctk.CTkLabel(c_data, text="Data do levantamento 📅", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color=COLORS["text_secondary"]).pack(anchor="w")
+        self.create_data_entry = ctk.CTkEntry(c_data, placeholder_text="DD/MM/AAAA", height=36)
         self.create_data_entry.insert(0, date.today().strftime("%d/%m/%Y"))
-        self.create_data_entry.pack(fill="x", pady=(2, 14))
+        self.create_data_entry.pack(fill="x", pady=(2, 0))
+
+        c_resp = ctk.CTkFrame(r_meta, fg_color="transparent")
+        c_resp.grid(row=0, column=1, sticky="ew", padx=(8, 0))
+        ctk.CTkLabel(c_resp, text="Responsável técnico *", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color=COLORS["text_secondary"]).pack(anchor="w")
+        self.create_resp_entry = ctk.CTkEntry(c_resp, placeholder_text="Nome do engenheiro responsável", height=36)
+        self.create_resp_entry.insert(0, "Gil Márcio Bispo de Jesus Júnior")
+        self.create_resp_entry.pack(fill="x", pady=(2, 0))
 
         # 6. Observações técnicas
         ctk.CTkLabel(inner, text="Observações técnicas", font=ctk.CTkFont(family=FONT_FAMILY, size=11, weight="bold"), text_color=COLORS["text_secondary"]).pack(anchor="w")
@@ -752,6 +837,7 @@ class QuantitativoView(ctk.CTkFrame):
             self.create_error_lbl.configure(text="⚠️ Preencha os campos obrigatórios (*).")
             return
 
+        resp = self.create_resp_entry.get().strip() or "Gil Márcio Bispo de Jesus Júnior"
         payload = {
             "obra": obra,
             "torre_setor": self.create_torre_entry.get().strip(),
@@ -760,7 +846,7 @@ class QuantitativoView(ctk.CTkFrame):
             "folha_projeto": self.create_folha_entry.get().strip(),
             "revisao": self.create_rev_entry.get().strip(),
             "data_levantamento": self.create_data_entry.get().strip(),
-            "responsavel": "Gil Márcio Bispo de Jesus Júnior",
+            "responsavel": resp,
             "observacoes": self.create_obs_text.get("1.0", "end").strip()
         }
 

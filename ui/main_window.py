@@ -86,7 +86,7 @@ class MainWindow(ctk.CTk):
 
         # Marca e Identidade Visual Superior (Logotipo Oficial)
         brand_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        brand_frame.grid(row=0, column=0, sticky="ew", padx=14, pady=(18, 12))
+        brand_frame.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
 
         if LOGO_DARK_PATH.exists() and LOGO_LIGHT_PATH.exists():
             try:
@@ -96,7 +96,7 @@ class MainWindow(ctk.CTk):
                 self.logo_ctk = ctk.CTkImage(
                     light_image=pil_light,
                     dark_image=pil_dark,
-                    size=(146, 105)
+                    size=(132, 95)
                 )
                 self.logo_label = ctk.CTkLabel(
                     brand_frame,

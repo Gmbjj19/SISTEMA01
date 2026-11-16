@@ -109,12 +109,24 @@ class Quantitativo:
         return round(sum(l.concreto_m3 for l in self.lancamentos), 3)
 
     @property
+    def total_concreto_m3(self) -> float:
+        return self.concreto_total
+
+    @property
     def concreto_executado(self) -> float:
         return round(sum(l.concreto_m3 for l in self.lancamentos if l.is_executado), 3)
 
     @property
+    def concreto_executado_m3(self) -> float:
+        return self.concreto_executado
+
+    @property
     def formas_total(self) -> float:
         return round(sum(l.formas_m2 for l in self.lancamentos), 2)
+
+    @property
+    def total_formas_m2(self) -> float:
+        return self.formas_total
 
     @property
     def formas_executadas(self) -> float:
